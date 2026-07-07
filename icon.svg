@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#5b21b6"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#bg)"/>
+  <!-- confetti -->
+  <circle cx="42" cy="44" r="7" fill="#fbbf24"/>
+  <circle cx="152" cy="38" r="5" fill="#34d399"/>
+  <circle cx="160" cy="140" r="6" fill="#f87171"/>
+  <circle cx="34" cy="148" r="5" fill="#60a5fa"/>
+  <rect x="128" y="64" width="10" height="10" rx="2" fill="#f472b6" transform="rotate(25 133 69)"/>
+  <rect x="56" y="112" width="9" height="9" rx="2" fill="#fbbf24" transform="rotate(-20 60 116)"/>
+  <!-- balloon -->
+  <ellipse cx="96" cy="86" rx="34" ry="40" fill="#fff"/>
+  <ellipse cx="86" cy="72" rx="10" ry="13" fill="#ede9fe" opacity=".9"/>
+  <path d="M96 126 l-6 10 h12 z" fill="#fff"/>
+  <path d="M96 136 q-8 14 2 24 q8 8 0 18" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>
