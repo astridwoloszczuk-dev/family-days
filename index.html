@@ -51,7 +51,7 @@ footer{text-align:center;color:var(--mut);font-size:11px;margin-top:26px}
 <div class="wrap">
 <header>
   <h1>🎉 Family Days</h1>
-  <p>Vote on what we do next — one veto and one wish each per month</p>
+  <p>Vote on what we do next — 👍 so oft du willst, ein Veto & ein Wunsch pro Monat</p>
 </header>
 
 <div class="who" id="who"></div>
@@ -61,7 +61,7 @@ footer{text-align:center;color:var(--mut);font-size:11px;margin-top:26px}
 <div id="voting"><div class="empty">Loading…</div></div>
 
 <h2>💡 Ideen-Pool — Familientage</h2>
-<p style="font-size:11.5px;color:var(--mut);margin:-2px 0 8px">Alles, was der Planer auf Lager hat. Früh vetoen spart allen Zeit — wünschen holt es schneller dran.</p>
+<p style="font-size:11.5px;color:var(--mut);margin:-2px 0 8px">Alles, was der Planer auf Lager hat. Früh vetoen spart allen Zeit — wünschen holt es schneller dran, 👍 zeigt dem Planer, was gut ankommt.</p>
 <div id="pool"><div class="empty">Pool wird gefüllt…</div></div>
 
 <h2>🤫 Date-Night-Ideen</h2>
@@ -161,10 +161,11 @@ function renderAll(hist){
       <div class="sum">${esc(p.summary || '')}</div>
       <div class="cost">${p.est_cost_pp ? '~€'+p.est_cost_pp+' p.P.' : ''}</div>
       <div class="acts">
+        <button class="up ${myVote(p.id,'up')?'on':''}"   data-id="${p.id}" data-k="up"   ${me?'':'disabled'}>👍 Dafür</button>
         <button class="veto ${myVote(p.id,'veto')?'on':''}" data-id="${p.id}" data-k="veto" ${me && (quota?.vetoes_left>0 || myVote(p.id,'veto'))?'':'disabled'}>🚫 Veto</button>
         <button class="wish ${myVote(p.id,'wish')?'on':''}" data-id="${p.id}" data-k="wish" ${me && (quota?.wishes_left>0 || myVote(p.id,'wish'))?'':'disabled'}>⭐ Wunsch</button>
       </div>
-      <div class="tally">🚫 ${tally(p.id,'veto')} · ⭐ ${tally(p.id,'wish')}</div>
+      <div class="tally">👍 ${tally(p.id,'up')} · 🚫 ${tally(p.id,'veto')} · ⭐ ${tally(p.id,'wish')}</div>
     </div>`).join('') : '<div class="empty">Pool wird gefüllt…</div>';
 
   const npool = plans.filter(p=>p.status==='pool' && p.flavour==='night');
