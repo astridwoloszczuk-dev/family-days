@@ -37,6 +37,15 @@ header p{margin:4px 0 0;color:var(--mut);font-size:12.5px}
 .acts button:disabled{opacity:.4;cursor:default}
 .pick{width:100%;margin-top:8px;border:none;background:var(--good);color:#fff;border-radius:10px;
   padding:10px;font-size:13.5px;font-weight:800;cursor:pointer}
+.acts .book{background:var(--acc);border-color:var(--acc);color:#fff}
+.bookrow{display:flex;gap:8px;margin-top:8px}
+.bookrow[hidden]{display:none}
+.bookrow input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:8px;
+  font-size:13px;font-family:inherit;background:#fff;color:var(--ink)}
+.bookrow button{border:none;background:var(--good);color:#fff;border-radius:10px;
+  padding:8px 14px;font-size:13px;font-weight:800;cursor:pointer}
+.note{background:#e7f8f2;border:1px solid var(--good);color:#087a5c;border-radius:10px;
+  padding:9px 12px;font-size:12.5px;margin-bottom:10px}
 .chosen-badge{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--good);
   border-radius:999px;padding:3px 10px;margin-bottom:6px}
 .tally{font-size:11.5px;color:var(--mut);margin-top:7px}
@@ -65,7 +74,8 @@ footer{text-align:center;color:var(--mut);font-size:11px;margin-top:26px}
 <div id="pool"><div class="empty">Pool wird gefüllt…</div></div>
 
 <h2>🤫 Date-Night-Ideen</h2>
-<p style="font-size:11.5px;color:var(--mut);margin:-2px 0 8px">Nur schauen. Welche und wann — das weiß nur Mama. 😏</p>
+<p style="font-size:11.5px;color:var(--mut);margin:-2px 0 8px">Welche und wann — das weiß nur Mama. 😏</p>
+<div id="nnote"></div>
 <div id="npool"><div class="empty">…</div></div>
 
 <h2>Was wir gemacht haben</h2>
@@ -124,7 +134,8 @@ function renderAll(hist){
   document.getElementById('quota').textContent = me && quota
     ? `${me}: ${quota.vetoes_left} Veto · ${quota.wishes_left} Wunsch übrig (${month()})`
     : 'Wer bist du? Oben antippen.';
-  const picked = plans.filter(p=>p.status==='chosen'||p.status==='scheduled');
+  // day only — a booked date night must never surface here (Niko-surprise)
+  const picked = plans.filter(p=>(p.status==='chosen'||p.status==='scheduled') && p.flavour==='day');
   const voting = plans.filter(p=>p.status==='voting');
   const pickedHtml = picked.map(p=>`
     <div class="card">
@@ -168,15 +179,40 @@ function renderAll(hist){
       <div class="tally">👍 ${tally(p.id,'up')} · 🚫 ${tally(p.id,'veto')} · ⭐ ${tally(p.id,'wish')}</div>
     </div>`).join('') : '<div class="empty">Pool wird gefüllt…</div>';
 
+  // Date-night ideas: teaser for everyone; Astrid additionally gets 👍/👎 (👎 = quota-free
+  // veto — kills a dud) and 📅 Buchen: she picks the date, the planner does the rest.
   const npool = plans.filter(p=>p.status==='pool' && p.flavour==='night');
+  const minBook = new Date(Date.now()+86400000).toISOString().slice(0,10);
   document.getElementById('npool').innerHTML = npool.length ? npool.map(p=>`
     <div class="card" style="opacity:.88">
       <h3>${esc(p.title)}</h3>
       <div class="sum">${esc(p.summary || '')}</div>
       <div class="cost">${p.est_cost_pp ? '~€'+p.est_cost_pp+' p.P.' : ''}</div>
+      ${me==='Astrid' ? `
+      <div class="acts">
+        <button class="up ${myVote(p.id,'up')?'on':''}"   data-id="${p.id}" data-k="up">👍</button>
+        <button class="veto ${myVote(p.id,'veto')?'on':''}" data-id="${p.id}" data-k="veto">👎</button>
+        <button class="book" data-id="${p.id}">📅 Buchen</button>
+      </div>
+      <div class="bookrow" id="book-${p.id}" hidden>
+        <input type="date" id="bd-${p.id}" min="${minBook}">
+        <button class="gobook" data-id="${p.id}">✓ Fixieren</button>
+      </div>` : ''}
     </div>`).join('') : '<div class="empty">…</div>';
 
-  document.querySelectorAll('.acts button').forEach(b=>b.onclick=()=>vote(b.dataset.id, b.dataset.k));
+  document.querySelectorAll('.acts button[data-k]').forEach(b=>b.onclick=()=>vote(b.dataset.id, b.dataset.k));
+  document.querySelectorAll('.book').forEach(b=>b.onclick=()=>{
+    const r = document.getElementById('book-'+b.dataset.id); r.hidden = !r.hidden;
+  });
+  document.querySelectorAll('.gobook').forEach(b=>b.onclick=async()=>{
+    const d = document.getElementById('bd-'+b.dataset.id).value;
+    if(!d || me!=='Astrid') return;
+    b.disabled = true;
+    await db.from('fd_plans').update({status:'chosen', event_date:d}).eq('id', b.dataset.id);
+    document.getElementById('nnote').innerHTML =
+      `<div class="note">✓ Gebucht für ${d} — der volle Plan (Timing, Reservierung, Babysitting-Check) kommt morgen früh per E-Mail. 🤫</div>`;
+    load();
+  });
 
   if(hist) document.getElementById('hist').innerHTML = hist.length ? hist.map(h=>`
     <div class="card">
@@ -193,17 +229,19 @@ function renderAll(hist){
 
 async function vote(pid, kind){
   if(!me) return;
+  // night ideas: Astrid's 👍/👎 are unlimited — the monthly quota is family-day machinery
+  const quotaFree = (plans.find(p=>p.id===pid)||{}).flavour==='night';
   const had = myVote(pid, kind);
   if(had){
     await db.from('fd_votes').delete().eq('plan_id',pid).eq('member',me).eq('kind',kind);
-    if(kind==='veto') await bumpQuota('vetoes_left', +1);
-    if(kind==='wish') await bumpQuota('wishes_left', +1);
+    if(!quotaFree && kind==='veto') await bumpQuota('vetoes_left', +1);
+    if(!quotaFree && kind==='wish') await bumpQuota('wishes_left', +1);
   } else {
-    if(kind==='veto' && quota.vetoes_left<1) return;
-    if(kind==='wish' && quota.wishes_left<1) return;
+    if(!quotaFree && kind==='veto' && quota.vetoes_left<1) return;
+    if(!quotaFree && kind==='wish' && quota.wishes_left<1) return;
     await db.from('fd_votes').insert({plan_id:pid, member:me, kind});
-    if(kind==='veto') await bumpQuota('vetoes_left', -1);
-    if(kind==='wish') await bumpQuota('wishes_left', -1);
+    if(!quotaFree && kind==='veto') await bumpQuota('vetoes_left', -1);
+    if(!quotaFree && kind==='wish') await bumpQuota('wishes_left', -1);
   }
   await ensureQuota(); await load();
 }

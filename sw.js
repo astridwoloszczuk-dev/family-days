@@ -1,7 +1,7 @@
 // Minimal service worker: network-first (the app is realtime — never serve stale
 // votes), cache fallback so the shell opens offline. Presence of a fetch handler
 // is also what makes Android offer "Add to Home Screen" as a real install.
-const CACHE = 'family-days-v1';
+const CACHE = 'family-days-v2';   // v2: Mama's 👍/👎/📅-Buchen on date-night ideas
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['.', 'manifest.json', 'icon.svg'])));
