@@ -52,7 +52,8 @@ header p{margin:4px 0 0;color:var(--mut);font-size:12.5px}
 .empty{text-align:center;color:var(--mut);font-size:13.5px;padding:34px 10px}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);margin:22px 0 8px}
 .hist .card{opacity:.92}
-.stars{font-size:16px;letter-spacing:2px;cursor:pointer;user-select:none}
+.stars{font-size:20px;user-select:none}
+.stars span{cursor:pointer;padding:4px 3px;color:var(--wish)}
 footer{text-align:center;color:var(--mut);font-size:11px;margin-top:26px}
 </style>
 </head>
@@ -218,11 +219,11 @@ function renderAll(hist){
     <div class="card">
       <div class="date">${h.event_date}</div>
       <h3>${esc(h.title)}</h3>
-      <div class="stars" data-id="${h.id}">${'★'.repeat(Math.round(h.rating||0))}${'☆'.repeat(5-Math.round(h.rating||0))}</div>
+      <div class="stars" data-id="${h.id}">${[1,2,3,4,5].map(i=>
+        `<span data-v="${i}">${i<=Math.round(h.rating||0)?'★':'☆'}</span>`).join('')}</div>
     </div>`).join('') : '<div class="empty">Noch nichts — bald!</div>';
-  document.querySelectorAll('.stars').forEach(s=>s.onclick=async(ev)=>{
-    const r = Math.min(5, Math.max(1, Math.round((ev.offsetX / s.offsetWidth) * 5 + 0.5)));
-    await db.from('fd_history').update({rating: r}).eq('id', s.dataset.id);
+  document.querySelectorAll('.stars span').forEach(s=>s.onclick=async()=>{
+    await db.from('fd_history').update({rating: +s.dataset.v}).eq('id', s.parentElement.dataset.id);
     load();
   });
 }
