@@ -97,6 +97,9 @@ footer{text-align:center;color:var(--mut);font-size:11px;margin-top:26px}
   <p style="font-size:11.5px;color:var(--mut);margin:6px 0 8px">Ideen fürs nächste Date — Mama &amp; Papa stimmen ab. Was gebucht wird und wann, weiß nur Mama. 😏</p>
   <div id="nnote"></div>
   <div id="npool"><div class="empty">…</div></div>
+
+  <h2>Was wir gemacht haben</h2>
+  <div id="nhist" class="hist"><div class="empty">Noch nichts — bald!</div></div>
 </section>
 
 <footer>Der Planer liest die Stimmen, Mama hat das letzte Wort. 🤫</footer>
@@ -131,7 +134,7 @@ function renderTabs(){
   if(tab==='night' && !nightAllowed()) tab = 'day';
   document.getElementById('tabs').innerHTML =
     `<button class="${tab==='day'?'on':''}" data-t="day">🎉 Familientage</button>` +
-    (nightAllowed() ? `<button class="${tab==='night'?'on':''}" data-t="night">🤫 Date Nights</button>` : '');
+    (nightAllowed() ? `<button class="${tab==='night'?'on':''}" data-t="night">🥰 Date Nights</button>` : '');
   document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
     tab = b.dataset.t; localStorage.setItem('fd-tab', tab); renderAll();
   });
@@ -258,7 +261,7 @@ function renderAll(){
     if(!d || me!=='Astrid') return;
     b.disabled = true;
     await db.from('fd_plans').update({status:'chosen', event_date:d}).eq('id', b.dataset.id);
-    const msg = `<div class="note">✓ Gebucht für ${fmtD(d)} — der volle Plan (Timing, Links, Backup) kommt morgen früh per E-Mail.${b.dataset.f==='night'?' 🤫':''}</div>`;
+    const msg = `<div class="note">✓ Gebucht für ${fmtD(d)} — der volle Plan (Timing, Links, Backup) kommt morgen früh per E-Mail.${b.dataset.f==='night'?' 🥰':''}</div>`;
     document.getElementById(b.dataset.f==='night'?'nnote':'dnote').innerHTML = msg;
     load();
   });
@@ -269,13 +272,16 @@ function renderAll(){
     load();
   });
 
-  document.getElementById('hist').innerHTML = hist.length ? hist.map(h=>`
+  const histCard = h=>`
     <div class="card">
       <div class="date">${fmtD(h.event_date) || ''}</div>
       <h3>${esc(h.title)}</h3>
       <div class="stars" data-id="${h.id}">${[1,2,3,4,5].map(i=>
         `<span data-v="${i}">${i<=Math.round(h.rating||0)?'★':'☆'}</span>`).join('')}</div>
-    </div>`).join('') : '<div class="empty">Noch nichts — bald!</div>';
+    </div>`;
+  const dhist = hist.filter(h=>h.flavour!=='night'), nhist = hist.filter(h=>h.flavour==='night');
+  document.getElementById('hist').innerHTML  = dhist.length ? dhist.map(histCard).join('') : '<div class="empty">Noch nichts — bald!</div>';
+  document.getElementById('nhist').innerHTML = nhist.length ? nhist.map(histCard).join('') : '<div class="empty">Noch nichts — bald!</div>';
   document.querySelectorAll('.stars span').forEach(s=>s.onclick=async()=>{
     await db.from('fd_history').update({rating: +s.dataset.v}).eq('id', s.parentElement.dataset.id);
     load();
