@@ -78,7 +78,11 @@ footer{text-align:center;color:var(--mut);font-size:11px;margin-top:26px}
 </section>
 
 <section id="tab-night" hidden>
-  <p style="font-size:11.5px;color:var(--mut);margin:6px 0 8px">Ideen fürs nächste Date — Mama &amp; Papa stimmen ab. Was gebucht wird und wann, weiß nur Mama. 😏</p>
+  <h2 id="nnexthead" hidden>📅 Im Kalender</h2>
+  <div id="npicked"></div>
+
+  <h2>💡 Ideen fürs nächste Date</h2>
+  <p style="font-size:11.5px;color:var(--mut);margin:-2px 0 8px">Mama &amp; Papa stimmen ab — 👍 dafür, 👎 weg damit, ⭐ unbedingt.</p>
   <div id="npool"><div class="empty">…</div></div>
 
   <h2>Was wir gemacht haben</h2>
@@ -160,17 +164,22 @@ function renderAll(){
     ? `🚫 ${vOn ? 'liegt auf „'+nm(vOn.plan_id)+'“' : 'frei'} · ⭐ ${wOn ? 'liegt auf „'+nm(wOn.plan_id)+'“' : 'frei'}`
     : 'Wer bist du? Oben antippen.';
 
-  // day only — a booked date night must never surface here (Niko-surprise)
-  // v2.0: Mama books in her diary; the planner finds the entry and lists it here
-  const picked = plans.filter(p=>p.status==='scheduled' && p.flavour==='day')
+  // v2.0: Mama books in her diary; the planner finds the entry and lists it here.
+  // Booked date nights show too (11 Nov: no longer a surprise for Niko) — on the
+  // night tab, which only Astrid & Niko get.
+  const booked = fl => plans.filter(p=>p.status==='scheduled' && p.flavour===fl)
     .sort((a,b)=>(a.event_date||'').localeCompare(b.event_date||''));
-  document.getElementById('nexthead').hidden = !picked.length;
-  document.getElementById('picked').innerHTML = picked.map(p=>`
+  const bookedCard = p=>`
     <div class="card">
       <div class="date">${fmtD(p.event_date) || ''}</div>
       <h3>${esc(p.title)}</h3>
       ${p.summary ? `<div class="sum">${esc(p.summary)}</div>` : ''}
-    </div>`).join('');
+    </div>`;
+  const picked = booked('day'), npicked = nightAllowed() ? booked('night') : [];
+  document.getElementById('nexthead').hidden = !picked.length;
+  document.getElementById('picked').innerHTML = picked.map(bookedCard).join('');
+  document.getElementById('nnexthead').hidden = !npicked.length;
+  document.getElementById('npicked').innerHTML = npicked.map(bookedCard).join('');
 
   const dpool = plans.filter(p=>p.status==='pool' && p.flavour==='day').sort(poolSort);
   document.getElementById('pool').innerHTML = dpool.length ? dpool.map(p=>`
@@ -189,7 +198,6 @@ function renderAll(){
     </div>`).join('') : '<div class="empty">Pool wird gefüllt…</div>';
 
   // Date-night ideas: Astrid & Niko both vote (👍/👎/⭐, all quota-free);
-  // 📅 Buchen stays Mama-only — which one + when never shows here.
   const npool = plans.filter(p=>p.status==='pool' && p.flavour==='night').sort(poolSort);
   document.getElementById('npool').innerHTML = npool.length ? npool.map(p=>`
     <div class="card ${poolGroup(p)===2?'vetoed':''}">
