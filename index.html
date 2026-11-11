@@ -40,22 +40,8 @@ header p{margin:4px 0 0;color:var(--mut);font-size:12.5px}
 .acts .veto.on{background:var(--warn);border-color:var(--warn);color:#fff}
 .acts .wish.on{background:var(--wish);border-color:var(--wish);color:#fff}
 .acts button:disabled{opacity:.4;cursor:default}
-.pick{width:100%;margin-top:8px;border:none;background:var(--good);color:#fff;border-radius:10px;
-  padding:10px;font-size:13.5px;font-weight:800;cursor:pointer}
-.bookwide{width:100%;margin-top:8px;border:none;background:var(--acc);color:#fff;border-radius:10px;
-  padding:10px;font-size:13.5px;font-weight:800;cursor:pointer}
 .bin{width:100%;margin-top:8px;border:1.5px solid var(--warn);background:#fff;color:var(--warn);
   border-radius:10px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer}
-.bookrow{display:flex;gap:8px;margin-top:8px}
-.bookrow[hidden]{display:none}
-.bookrow input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:8px;
-  font-size:13px;font-family:inherit;background:#fff;color:var(--ink)}
-.bookrow button{border:none;background:var(--good);color:#fff;border-radius:10px;
-  padding:8px 14px;font-size:13px;font-weight:800;cursor:pointer}
-.note{background:#e7f8f2;border:1px solid var(--good);color:#087a5c;border-radius:10px;
-  padding:9px 12px;font-size:12.5px;margin-bottom:10px}
-.chosen-badge{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--good);
-  border-radius:999px;padding:3px 10px;margin-bottom:6px}
 .tally{font-size:11.5px;color:var(--mut);margin-top:7px}
 .newb{font-size:10px;font-weight:800;background:var(--acc);color:#fff;border-radius:999px;
   padding:2px 8px;margin-right:6px;vertical-align:2px}
@@ -80,12 +66,8 @@ footer{text-align:center;color:var(--mut);font-size:11px;margin-top:26px}
 <nav class="tabs" id="tabs"></nav>
 
 <section id="tab-day">
-  <h2 id="nexthead" hidden>🎯 Nächste Aktivität</h2>
-  <div id="dnote"></div>
+  <h2 id="nexthead" hidden>📅 Im Kalender</h2>
   <div id="picked"></div>
-
-  <h2 id="votehead" hidden>🗳 Zum Abstimmen</h2>
-  <div id="voting"></div>
 
   <h2>💡 Ideen-Pool</h2>
   <p style="font-size:11.5px;color:var(--mut);margin:-2px 0 8px">Alles, was der Planer auf Lager hat — ⭐ Wünsche zuerst, dann nach 👍 sortiert. Früh vetoen spart allen Zeit.</p>
@@ -97,14 +79,13 @@ footer{text-align:center;color:var(--mut);font-size:11px;margin-top:26px}
 
 <section id="tab-night" hidden>
   <p style="font-size:11.5px;color:var(--mut);margin:6px 0 8px">Ideen fürs nächste Date — Mama &amp; Papa stimmen ab. Was gebucht wird und wann, weiß nur Mama. 😏</p>
-  <div id="nnote"></div>
   <div id="npool"><div class="empty">…</div></div>
 
   <h2>Was wir gemacht haben</h2>
   <div id="nhist" class="hist"><div class="empty">Noch nichts — bald!</div></div>
 </section>
 
-<footer>Der Planer liest die Stimmen, Mama hat das letzte Wort. 🤫</footer>
+<footer>Der Planer liest eure Stimmen und sucht neue Ideen — gebucht wird im Kalender. 🤫</footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -171,15 +152,6 @@ function tally(pid, kind){ return votes.filter(v=>v.plan_id===pid && v.kind===ki
 function poolGroup(p){ return tally(p.id,'veto')>0 ? 2 : (tally(p.id,'wish')>0 ? 0 : 1); }
 function poolSort(a,b){ return poolGroup(a)-poolGroup(b) || tally(b.id,'up')-tally(a.id,'up'); }
 
-function bookUI(p){
-  const minBook = new Date(Date.now()+86400000).toISOString().slice(0,10);
-  return `<button class="bookwide" data-id="${p.id}">📅 Buchen</button>
-  <div class="bookrow" id="book-${p.id}" hidden>
-    <input type="date" id="bd-${p.id}" min="${minBook}">
-    <button class="gobook" data-id="${p.id}" data-f="${p.flavour}">✓ Fixieren</button>
-  </div>`;
-}
-
 function renderAll(){
   renderWho(); renderTabs();
   const nm = id => short((plans.find(p=>p.id===id)||{}).title);
@@ -189,37 +161,16 @@ function renderAll(){
     : 'Wer bist du? Oben antippen.';
 
   // day only — a booked date night must never surface here (Niko-surprise)
-  const picked = plans.filter(p=>(p.status==='chosen'||p.status==='scheduled') && p.flavour==='day');
-  const voting = plans.filter(p=>p.status==='voting');
+  // v2.0: Mama books in her diary; the planner finds the entry and lists it here
+  const picked = plans.filter(p=>p.status==='scheduled' && p.flavour==='day')
+    .sort((a,b)=>(a.event_date||'').localeCompare(b.event_date||''));
   document.getElementById('nexthead').hidden = !picked.length;
   document.getElementById('picked').innerHTML = picked.map(p=>`
     <div class="card">
-      <span class="chosen-badge">✓ ${p.status==='scheduled'?'Im Kalender':'Gewählt'}</span>
-      <div class="date">Gebucht für ${fmtD(p.event_date) || 'TBD'}</div>
-      <h3>${esc(p.title)}</h3>
-      <div class="sum">${esc(p.summary || '')}</div>
-    </div>`).join('');
-  document.getElementById('votehead').hidden = !voting.length;
-  document.getElementById('voting').innerHTML = voting.length ? voting.map(p=>`
-    <div class="card">
       <div class="date">${fmtD(p.event_date) || ''}</div>
       <h3>${esc(p.title)}</h3>
-      <div class="sum">${esc(p.summary || '')}</div>
-      <div class="cost">${p.est_cost_pp ? '~€'+p.est_cost_pp+' p.P.' : ''}</div>
-      <div class="acts">
-        <button class="up ${myVote(p.id,'up')?'on':''}"   data-id="${p.id}" data-k="up"   ${me?'':'disabled'}>👍 Dafür</button>
-        <button class="veto ${myVote(p.id,'veto')?'on':''}" data-id="${p.id}" data-k="veto" ${me?'':'disabled'}>🚫 Veto</button>
-        <button class="wish ${myVote(p.id,'wish')?'on':''}" data-id="${p.id}" data-k="wish" ${me?'':'disabled'}>⭐ Wunsch</button>
-      </div>
-      <div class="tally">👍 ${tally(p.id,'up')} · 🚫 ${tally(p.id,'veto')} · ⭐ ${tally(p.id,'wish')}</div>
-      ${me==='Astrid' ? `<button class="pick" data-id="${p.id}">✓ Nehmen wir! (Mama-Entscheid)</button>` : ''}
-    </div>`).join('')
-    : (picked.length ? '' : '<div class="empty">Gerade nichts geplant — der Planer meldet sich.</div>');
-  document.querySelectorAll('.pick').forEach(b=>b.onclick=async()=>{
-    b.disabled = true;
-    await db.from('fd_plans').update({status:'chosen'}).eq('id', b.dataset.id);
-    load();
-  });
+      ${p.summary ? `<div class="sum">${esc(p.summary)}</div>` : ''}
+    </div>`).join('');
 
   const dpool = plans.filter(p=>p.status==='pool' && p.flavour==='day').sort(poolSort);
   document.getElementById('pool').innerHTML = dpool.length ? dpool.map(p=>`
@@ -233,7 +184,7 @@ function renderAll(){
         <button class="wish ${myVote(p.id,'wish')?'on':''}" data-id="${p.id}" data-k="wish" ${me?'':'disabled'}>⭐ Wunsch</button>
       </div>
       <div class="tally">👍 ${tally(p.id,'up')} · 🚫 ${tally(p.id,'veto')} · ⭐ ${tally(p.id,'wish')}</div>
-      ${me==='Astrid' && poolGroup(p)!==2 ? bookUI(p) : ''}
+
       ${me==='Astrid' && poolGroup(p)===2 ? `<button class="bin" data-id="${p.id}">🗑 Aus dem Pool entfernen</button>` : ''}
     </div>`).join('') : '<div class="empty">Pool wird gefüllt…</div>';
 
@@ -252,23 +203,11 @@ function renderAll(){
         <button class="wish ${myVote(p.id,'wish')?'on':''}" data-id="${p.id}" data-k="wish">⭐</button>
       </div>
       <div class="tally">👍 ${tally(p.id,'up')} · 👎 ${tally(p.id,'veto')} · ⭐ ${tally(p.id,'wish')}</div>` : ''}
-      ${me==='Astrid' && poolGroup(p)!==2 ? bookUI(p) : ''}
+
       ${me==='Astrid' && poolGroup(p)===2 ? `<button class="bin" data-id="${p.id}">🗑 Aus dem Pool entfernen</button>` : ''}
     </div>`).join('') : '<div class="empty">…</div>';
 
   document.querySelectorAll('.acts button[data-k]').forEach(b=>b.onclick=()=>vote(b.dataset.id, b.dataset.k));
-  document.querySelectorAll('.bookwide').forEach(b=>b.onclick=()=>{
-    const r = document.getElementById('book-'+b.dataset.id); r.hidden = !r.hidden;
-  });
-  document.querySelectorAll('.gobook').forEach(b=>b.onclick=async()=>{
-    const d = document.getElementById('bd-'+b.dataset.id).value;
-    if(!d || me!=='Astrid') return;
-    b.disabled = true;
-    await db.from('fd_plans').update({status:'chosen', event_date:d}).eq('id', b.dataset.id);
-    const msg = `<div class="note">✓ Gebucht für ${fmtD(d)} — der volle Plan (Timing, Links, Backup) kommt morgen früh per E-Mail.${b.dataset.f==='night'?' 🥰':''}</div>`;
-    document.getElementById(b.dataset.f==='night'?'nnote':'dnote').innerHTML = msg;
-    load();
-  });
   document.querySelectorAll('.bin').forEach(b=>b.onclick=async()=>{
     if(me!=='Astrid') return;
     b.disabled = true;
